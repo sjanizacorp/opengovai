@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OpenGovAI — Platform Configuration
+# This file controls which scan engines, checks, and frameworks are active
+# ─────────────────────────────────────────────────────────────────────────────
+
+organization:
+  name: "Acme Corp"
+  industry: "financial_services"
+  # Options: financial_services | healthcare | legal | hr | critical_infrastructure
+  #          technology | retail | government | other
+  regulatory_scope:
+    - eu_ai_act
+    - nist_ai_rmf
+    - iso_42001
+    - gdpr
+
+scan_engine:
+  enabled_tools:
+    garak: true          # 120+ probe modules (model-level)
+    promptfoo: true      # 50+ vulnerability types (application-level)
+    pyrit: true          # Multi-turn adversarial attacks
+    deepteam: true       # Automated red-teaming
+    fuzzyai: false       # Genetic fuzzing — computationally intensive, enable for deep scans
+    semgrep_ai: true     # Static code analysis for AI integration patterns
+
+  garak:
+    probe_groups:
+      - prompt_injection
+      - jailbreaks
+      - data_extraction
+      - toxicity
+      - hallucination
+      - encoding_attacks
+      - sycophancy
+    max_attempts: 5
+    timeout_seconds: 120
+
+  promptfoo:
+    vulnerability_types:
+      - prompt_injection
+      - pii_leakage
+      - rag_poisoning
+      - jailbreak
+      - agent_tool_misuse
+      - multi_turn_escalation
+    report_format: "html"
+
+  custom_checks:
+    agentic_governance: true    # OWASP Agentic Top 10 (ASI prefix)
+    rag_security: true          # RAG pipeline indirect injection & poisoning
+    data_privacy: true          # PII detection, GDPR/CCPA controls
+    supply_chain: true          # Model provenance, AI-BOM, vendor risk
+    bias_fairness: true         # Demographic parity, counterfactual fairness
+    explainability: true        # Model card completeness, SHAP/LIME
+    operational_security: true  # Credential exposure, logging gaps, rate limiting
+    eu_ai_act: true             # EU AI Act risk tier classification and Annex IV
+
+risk_scoring:
+  thresholds:
+    critical: 9.0
+    high: 7.0
+    medium: 4.0
+    low: 1.0
+  auto_block_on_critical: true
+  require_approval_on_high: true
+  industry_weight_multipliers:
+    data_privacy: 1.5
+    bias_fairness: 1.3
+    operational_security: 1.2
+
+alerts:
+  slack_webhook: "${SLACK_WEBHOOK_URL}"
+  email_recipients:
+    - "security@acme.com"
+    - "ai-governance@acme.com"
+  pagerduty_key: "${PAGERDUTY_SERVICE_KEY}"
+  alert_on_severity:
+    - critical
+    - high
+
+integrations:
+  jira:
+    enabled: false
+    base_url: "${JIRA_BASE_URL}"
+    project_key: "${JIRA_PROJECT_KEY}"
+    auto_create_tickets: true
+  github_actions:
+    enabled: false
+    block_pr_on:
+      - critical
+      - high
+
+compliance_frameworks:
+  primary: "eu_ai_act"
+  secondary:
+    - nist_ai_rmf
+    - iso_42001
+  auto_evidence_collection: true
+  report_schedule: "weekly"
+  report_recipients:
+    - "compliance@acme.com"
+
+storage:
+  scan_artifacts_path: "./data/artifacts"
+  retention_days: 365
+  encrypt_at_rest: true

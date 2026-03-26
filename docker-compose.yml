@@ -1,0 +1,67 @@
+services:
+
+  # ── API Backend ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: opengovai-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENGOVAI_ENV=${OPENGOVAI_ENV:-production}
+      - OPENGOVAI_SECRET_KEY=${OPENGOVAI_SECRET_KEY:-changeme-use-strong-key-in-production}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY:-}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+    volumes:
+      - api-data:/app/data
+      - ./config:/app/config:ro
+    networks:
+      - opengovai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── React Frontend ──────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api/v1
+    container_name: opengovai-frontend
+    restart: unless-stopped
+    networks:
+      - opengovai
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ── Nginx Reverse Proxy ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: opengovai-nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - opengovai
+    depends_on:
+      - api
+      - frontend
+
+volumes:
+  api-data:
+
+networks:
+  opengovai:
+    driver: bridge
