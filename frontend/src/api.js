@@ -24,3 +24,5 @@ export const getWorkflows    = (params) => api.get('/workflows', { params }).the
 export const createWorkflow  = (data) => api.post('/workflows', data).then(r => r.data);
 export const approveWorkflowStage = (id, approver, notes) =>
   api.patch(`/workflows/${id}/approve`, null, { params: { approver, notes } }).then(r => r.data);
+export const listFrameworks     = () => api.get('/frameworks').then(r => r.data);
+export const registerFramework  = (data) => api.post('/frameworks', data).then(r => r.data);

@@ -2,276 +2,235 @@
 # =============================================================================
 # OpenGovAI — Native Start Script
 # =============================================================================
-set -uo pipefail
+# NOTE: Do NOT use `set -u` — .install-config may have been written with
+# corrupted variable names (non-ASCII suffixes) that trigger "unbound variable"
+# before we can sanitise them. We handle missing vars with :- defaults instead.
+set -eo pipefail
 
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 info()    { echo -e "${CYAN}[OpenGovAI]${NC} $*"; }
 success() { echo -e "${GREEN}[✓]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[!]${NC} $*"; }
-die()     { echo -e "\n${RED}[✗] ERROR:${NC} $*"; exit 1; }
+die()     { echo -e "\n${RED}[✗]${NC} $*" >&2; exit 1; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIDFILE="$ROOT/.pids"
 LOGDIR="$ROOT/logs"
-OS="$(uname -s)"
 mkdir -p "$LOGDIR"
 
-# ── Load install config ────────────────────────────────────────────────────────
+# ── Load and sanitise .install-config ────────────────────────────────────────
+# We read it with Python (not `source`) to safely extract only valid KEY=VALUE
+# pairs, stripping any non-ASCII garbage that corrupts bash variable names.
 [ -f "$ROOT/.install-config" ] || die "Not installed. Run: ./install-native.sh"
-source "$ROOT/.install-config"
 
+eval "$(python3 - "$ROOT/.install-config" << 'PYEOF'
+import sys, re
+
+path = sys.argv[1]
+with open(path, 'rb') as f:
+    raw = f.read()
+
+# Strip non-ASCII bytes and carriage returns
+text = raw.decode('ascii', errors='ignore').replace('\r', '')
+
+for line in text.splitlines():
+    line = line.strip()
+    # Only export lines that are strictly KEY=value (ASCII letters, digits, underscores)
+    m = re.match(r'^([A-Z_][A-Z0-9_]*)=(.*)$', line)
+    if m:
+        key, val = m.group(1), m.group(2)
+        # Emit as a safe shell assignment
+        # Escape single quotes in val just in case
+        val_safe = val.replace("'", "'\\''")
+        print(f"{key}='{val_safe}'")
+PYEOF
+)"
+
+# ── Apply defaults for any missing variables ──────────────────────────────────
 API_PORT="${API_PORT:-8000}"
-NGINX_PORT="${NGINX_PORT:-3000}"
+FE_PORT="${NGINX_PORT:-3000}"
 API_HOST="${API_HOST:-127.0.0.1}"
 VENV_DIR="${VENV_DIR:-$ROOT/.venv}"
-# Read NGINX_CONFIGURED as a plain string comparison (avoids "false" being executed as a command)
-NGINX_OK="${NGINX_CONFIGURED:-false}"
+NGINX_CONFIGURED="${NGINX_CONFIGURED:-false}"
+OS="${OS:-$(uname -s)}"
+
+# Resolve python — always prefer venv
+if [ -f "$VENV_DIR/bin/python3" ]; then
+  PYTHON="$VENV_DIR/bin/python3"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON="$(command -v python3)"
+else
+  die "python3 not found"
+fi
+
+BUILD="$ROOT/frontend/build"
 
 echo ""
 echo -e "${CYAN}  OpenGovAI — Starting${NC}"
+echo -e "  API port:      $API_PORT"
+echo -e "  Frontend port: $FE_PORT"
+echo -e "  Python:        $PYTHON"
 echo ""
 
-# ── Guard: already running ─────────────────────────────────────────────────────
+# ── Already running? ──────────────────────────────────────────────────────────
 if [ -f "$PIDFILE" ]; then
-  OLD_PID="$(grep '^API=' "$PIDFILE" 2>/dev/null | cut -d= -f2 || true)"
-  if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-    warn "Already running (PID $OLD_PID). Use ./stop-native.sh first."
-    echo -e "  ${GREEN}Dashboard:${NC} http://localhost:${NGINX_PORT}"
+  OLD="$(grep '^API=' "$PIDFILE" 2>/dev/null | cut -d= -f2 || true)"
+  if [ -n "$OLD" ] && kill -0 "$OLD" 2>/dev/null; then
+    warn "Already running (API PID $OLD). Use ./stop-native.sh first."
     exit 0
   fi
   rm -f "$PIDFILE"
 fi
 
-# ── Sanity checks ──────────────────────────────────────────────────────────────
-[ -f "$VENV_DIR/bin/activate" ]          || die "Virtualenv missing — run: ./install-native.sh"
-[ -f "$ROOT/frontend/build/index.html" ] || die "Frontend not built — run: ./install-native.sh"
+# ── Preconditions ─────────────────────────────────────────────────────────────
+[ -f "$VENV_DIR/bin/activate" ] || die "Virtualenv missing — run: ./install-native.sh"
+[ -f "$BUILD/index.html" ]      || die "Frontend not built — run: ./install-native.sh"
+[ -f "$ROOT/server.py" ]        || die "server.py missing — re-extract the archive"
 
 # ── Load .env ─────────────────────────────────────────────────────────────────
 [ -f "$ROOT/.env" ] && { set -a; source "$ROOT/.env"; set +a; }
 
-# ── Pre-flight import check ───────────────────────────────────────────────────
+# ── Backend import check ──────────────────────────────────────────────────────
 info "Checking backend…"
-source "$VENV_DIR/bin/activate"
-CHECK=$(cd "$ROOT/backend" && python3 - 2>&1 << 'PYEOF'
-import sys
-sys.path.insert(0, '.')
+IMPORT_CHECK=$(cd "$ROOT/backend" && "$PYTHON" -c "
+import sys; sys.path.insert(0,'.')
 try:
     import database, models, scanner, compliance, main
-    print("OK")
+    print('OK')
 except Exception as e:
-    print(f"ERROR: {e}")
-PYEOF
-)
-deactivate
-
-if [ "$CHECK" != "OK" ]; then
-  echo -e "${RED}[✗] Backend import error:${NC}"
-  echo "$CHECK"
-  die "Run: ./install-native.sh  to reinstall dependencies."
-fi
+    print('FAIL:' + str(e))
+" 2>&1)
+[ "$IMPORT_CHECK" = "OK" ] || { echo "$IMPORT_CHECK"; die "Backend error — run: ./install-native.sh"; }
 success "Backend OK"
 
-# ── Check API port free ────────────────────────────────────────────────────────
+# ── Port checks ───────────────────────────────────────────────────────────────
 if lsof -Pi ":${API_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
-  die "Port ${API_PORT} in use. Run: ./stop-native.sh  or choose a different --api-port."
+  die "Port $API_PORT in use. Run: ./stop-native.sh"
+fi
+if lsof -Pi ":${FE_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
+  die "Port $FE_PORT in use. Run: ./stop-native.sh"
 fi
 
-# ── Start API ──────────────────────────────────────────────────────────────────
-info "Starting API on http://${API_HOST}:${API_PORT} …"
-source "$VENV_DIR/bin/activate"
+# ── Start API ─────────────────────────────────────────────────────────────────
+info "Starting API on port $API_PORT…"
 cd "$ROOT/backend"
-nohup uvicorn main:app \
+"$PYTHON" -m uvicorn main:app \
   --host "$API_HOST" \
   --port "$API_PORT" \
   --workers 2 \
   --log-level info \
   >> "$LOGDIR/api.log" 2>&1 &
 API_PID=$!
-deactivate
 cd "$ROOT"
 echo "API=$API_PID" > "$PIDFILE"
 
-# Brief pause then check it didn't die on import
-sleep 2
-if ! kill -0 "$API_PID" 2>/dev/null; then
-  echo -e "${RED}[✗] API crashed immediately. Log:${NC}"
-  tail -30 "$LOGDIR/api.log" 2>/dev/null
-  die "Fix the error above, then run ./start-native.sh"
-fi
-
-# Poll health
-info "Waiting for API to be ready…"
+info "Waiting for API…"
 for i in $(seq 1 30); do
   if curl -sf "http://${API_HOST}:${API_PORT}/api/v1/health" >/dev/null 2>&1; then
-    success "API is up (PID $API_PID)"
+    success "API ready (PID $API_PID)"
     break
   fi
-  if [ "$i" -eq 30 ]; then
-    echo -e "${RED}[✗] API did not respond. Log:${NC}"
-    tail -30 "$LOGDIR/api.log" 2>/dev/null
-    die "Full log: $LOGDIR/api.log"
-  fi
   if ! kill -0 "$API_PID" 2>/dev/null; then
-    echo -e "${RED}[✗] API process died. Log:${NC}"
-    tail -30 "$LOGDIR/api.log" 2>/dev/null
-    die "Fix the error above, then run ./start-native.sh"
+    echo -e "${RED}API crashed:${NC}"; tail -20 "$LOGDIR/api.log"
+    die "Fix above then run ./start-native.sh"
   fi
-  printf '.'
-  sleep 1
+  [ "$i" -eq 30 ] && { tail -10 "$LOGDIR/api.log"; die "API timed out"; }
+  printf '.'; sleep 1
 done
 echo ""
 
-# ── Start frontend ─────────────────────────────────────────────────────────────
-# Check if nginx has our config file (string comparison, not boolean eval)
-NGINX_CONF_FOUND=false
-for loc in \
-  "$(brew --prefix 2>/dev/null)/etc/nginx/servers/opengovai.conf" \
-  "/etc/nginx/sites-enabled/opengovai.conf" \
-  "/etc/nginx/conf.d/opengovai.conf"; do
-  [ -f "$loc" ] && NGINX_CONF_FOUND=true && break
-done
+# ── Start frontend ────────────────────────────────────────────────────────────
+# Strategy: try nginx if NGINX_CONFIGURED=true AND it actually returns HTTP 200.
+# Otherwise fall back to Python server.py — no exceptions.
 
-if [ "$NGINX_CONF_FOUND" = "true" ] && command -v nginx >/dev/null 2>&1; then
-  info "Starting nginx on port ${NGINX_PORT} …"
-  if [[ "$OS" == "Darwin" ]]; then
-    brew services start nginx >/dev/null 2>&1 \
-      || brew services restart nginx >/dev/null 2>&1 \
-      || nginx -c "$(brew --prefix)/etc/nginx/nginx.conf" 2>/dev/null \
-      || warn "nginx could not start — falling through to Python server"
-    # Verify nginx actually bound the port
-    sleep 1
-    if ! lsof -Pi ":${NGINX_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
-      warn "nginx didn't bind port ${NGINX_PORT} — using Python server instead"
-      NGINX_CONF_FOUND=false
+USE_NGINX=false
+
+if [ "$NGINX_CONFIGURED" = "true" ] && command -v nginx >/dev/null 2>&1; then
+  NGINX_CONF=""
+  for loc in \
+    "$(brew --prefix 2>/dev/null)/etc/nginx/servers/opengovai.conf" \
+    "/etc/nginx/sites-enabled/opengovai.conf" \
+    "/etc/nginx/conf.d/opengovai.conf"; do
+    [ -f "$loc" ] && NGINX_CONF="$loc" && break
+  done
+
+  if [ -n "$NGINX_CONF" ]; then
+    info "Trying nginx (config: $NGINX_CONF)…"
+    if [[ "$OS" == "Darwin" ]]; then
+      brew services restart nginx >/dev/null 2>&1 || nginx -s reload 2>/dev/null || true
     else
-      success "nginx running on port ${NGINX_PORT}"
+      sudo systemctl restart nginx 2>/dev/null || true
     fi
-  else
-    sudo systemctl start nginx 2>/dev/null \
-      || sudo nginx 2>/dev/null \
-      || warn "nginx could not start"
-    sleep 1
-    if ! lsof -Pi ":${NGINX_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
-      warn "nginx didn't bind port ${NGINX_PORT} — using Python server instead"
-      NGINX_CONF_FOUND=false
+    sleep 2
+    if lsof -Pi ":${FE_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
+      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${FE_PORT}/" 2>/dev/null || echo "000")
+      if [ "$HTTP_CODE" = "200" ]; then
+        success "nginx serving frontend (HTTP 200)"
+        USE_NGINX=true
+      else
+        warn "nginx on port $FE_PORT but GET / → HTTP $HTTP_CODE (not 200)"
+        warn "Stopping nginx, switching to Python server. Run ./fix-nginx.sh to repair nginx."
+        brew services stop nginx 2>/dev/null || sudo systemctl stop nginx 2>/dev/null || true
+        sleep 1
+      fi
     else
-      success "nginx running on port ${NGINX_PORT}"
+      warn "nginx didn't bind port $FE_PORT — using Python server"
     fi
   fi
 fi
 
-# Always fall through to Python server if nginx didn't bind the port
-if [ "$NGINX_CONF_FOUND" = "false" ] || ! lsof -Pi ":${NGINX_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
-  if lsof -Pi ":${NGINX_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
-    die "Port ${NGINX_PORT} is already in use by something else. Run: ./stop-native.sh"
-  fi
+if [ "$USE_NGINX" = "false" ]; then
+  # Wait for port to be free
+  for i in $(seq 1 5); do
+    lsof -Pi ":${FE_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1 || break
+    sleep 1
+  done
+  lsof -Pi ":${FE_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1 \
+    && die "Port $FE_PORT still busy. Run: ./stop-native.sh"
 
-  info "Serving frontend on http://localhost:${NGINX_PORT} (Python server) …"
-
-  # Write the proxy+static server script
-  cat > "$ROOT/.static_server.py" << PYEOF
-#!/usr/bin/env python3
-"""
-OpenGovAI — built-in combined server.
-Serves the React SPA from frontend/build/ and proxies /api/* to FastAPI.
-"""
-import os, http.server, urllib.request, urllib.error
-from pathlib import Path
-
-BUILD   = Path("${ROOT}/frontend/build")
-API_URL = "http://${API_HOST}:${API_PORT}"
-PORT    = int(os.environ.get("PORT", "${NGINX_PORT}"))
-
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *a, **kw):
-        super().__init__(*a, directory=str(BUILD), **kw)
-
-    def _proxy(self, method):
-        url = API_URL + self.path
-        length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(length) if length else None
-        hdrs = {k: v for k, v in self.headers.items()
-                if k.lower() not in ("host", "transfer-encoding", "content-length")}
-        if body:
-            hdrs["Content-Length"] = str(len(body))
-        try:
-            req = urllib.request.Request(url, data=body, method=method, headers=hdrs)
-            with urllib.request.urlopen(req, timeout=120) as r:
-                self.send_response(r.status)
-                for k, v in r.headers.items():
-                    if k.lower() not in ("transfer-encoding", "connection"):
-                        self.send_header(k, v)
-                self.end_headers()
-                self.wfile.write(r.read())
-        except urllib.error.HTTPError as e:
-            body = e.read()
-            self.send_response(e.code)
-            for k, v in e.headers.items():
-                if k.lower() not in ("transfer-encoding", "connection"):
-                    self.send_header(k, v)
-            self.end_headers()
-            self.wfile.write(body)
-        except Exception as e:
-            self.send_error(502, str(e))
-
-    def _spa(self):
-        """Serve static file or fall back to index.html for SPA routing."""
-        p = self.path.split("?")[0].lstrip("/")
-        f = BUILD / p if p else BUILD / "index.html"
-        if not f.exists() or f.is_dir():
-            self.path = "/index.html"
-        super().do_GET()
-
-    def do_GET(self):
-        if self.path.startswith(("/api/", "/docs", "/openapi.json", "/redoc")):
-            self._proxy("GET")
-        else:
-            self._spa()
-
-    def do_POST(self):   self._proxy("POST")
-    def do_PUT(self):    self._proxy("PUT")
-    def do_PATCH(self):  self._proxy("PATCH")
-    def do_DELETE(self): self._proxy("DELETE")
-
-    def log_message(self, fmt, *args):
-        # Only log API calls, suppress static asset noise
-        msg = str(args)
-        if any(x in msg for x in ["/api/", "/docs", "404", "500", "502"]):
-            super().log_message(fmt, *args)
-
-print(f"OpenGovAI frontend → http://localhost:{PORT}", flush=True)
-print(f"API proxy target   → {API_URL}", flush=True)
-http.server.HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
-PYEOF
-
-  source "$VENV_DIR/bin/activate"
-  PORT="$NGINX_PORT" nohup python3 "$ROOT/.static_server.py" \
+  info "Starting Python frontend server on port $FE_PORT…"
+  "$PYTHON" "$ROOT/server.py" \
+    "$BUILD" \
+    "http://${API_HOST}:${API_PORT}" \
+    "$FE_PORT" \
     >> "$LOGDIR/frontend.log" 2>&1 &
   FE_PID=$!
-  deactivate
   echo "FRONTEND=$FE_PID" >> "$PIDFILE"
 
-  # Confirm it bound the port
-  sleep 1
-  if ! kill -0 "$FE_PID" 2>/dev/null; then
-    echo -e "${RED}[✗] Frontend server crashed. Log:${NC}"
-    tail -20 "$LOGDIR/frontend.log" 2>/dev/null
-    die "Full log: $LOGDIR/frontend.log"
+  BOUND=false
+  for i in $(seq 1 8); do
+    sleep 1
+    if ! kill -0 "$FE_PID" 2>/dev/null; then
+      echo -e "${RED}Frontend server crashed:${NC}"
+      cat "$LOGDIR/frontend.log"
+      die "Fix above then run ./start-native.sh"
+    fi
+    if lsof -Pi ":${FE_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
+      BOUND=true; break
+    fi
+    printf '.'
+  done
+  echo ""
+  [ "$BOUND" = "true" ] || { cat "$LOGDIR/frontend.log"; die "Frontend didn't bind port $FE_PORT"; }
+
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${FE_PORT}/" 2>/dev/null || echo "000")
+  if [ "$HTTP_CODE" = "200" ]; then
+    success "Frontend ready — GET / → HTTP 200 ✓"
+  else
+    warn "Frontend bound port $FE_PORT but GET / → HTTP $HTTP_CODE"
+    cat "$LOGDIR/frontend.log"
   fi
-  if ! lsof -Pi ":${NGINX_PORT}" -sTCP:LISTEN -t >/dev/null 2>&1; then
-    die "Frontend server started but port ${NGINX_PORT} is not bound. Log: $LOGDIR/frontend.log"
-  fi
-  success "Frontend server running (PID $FE_PID)"
 fi
 
-# ── Done ───────────────────────────────────────────────────────────────────────
+# ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 success "OpenGovAI is running!"
 echo ""
-echo -e "  ${GREEN}Dashboard:${NC}   http://localhost:${NGINX_PORT}"
+echo -e "  ${GREEN}Dashboard:${NC}   http://localhost:${FE_PORT}"
 echo -e "  ${GREEN}API Health:${NC}  http://localhost:${API_PORT}/api/v1/health"
 echo -e "  ${GREEN}API Docs:${NC}    http://localhost:${API_PORT}/docs"
 echo ""
-echo -e "  ${YELLOW}Logs:${NC}   tail -f ${LOGDIR}/api.log"
-echo -e "  ${YELLOW}Stop:${NC}   ./stop-native.sh"
+echo -e "  Logs:   tail -f $LOGDIR/api.log"
+echo -e "          tail -f $LOGDIR/frontend.log"
+echo -e "  Stop:   ./stop-native.sh"
 echo ""

@@ -438,16 +438,11 @@ fi
 # Write .install-config for other scripts to source
 # ─────────────────────────────────────────────────────────────────────────────
 mkdir -p "$INSTALL_DIR/logs"
-cat > "$INSTALL_DIR/.install-config" << CFGEOF
-INSTALL_DIR=${INSTALL_DIR}
-API_PORT=${API_PORT}
-NGINX_PORT=${NGINX_PORT}
-API_HOST=${API_HOST}
-VENV_DIR=${VENV_DIR}
-OS=${OS}
-NGINX_CONFIGURED=${NGINX_CONFIGURED}
-INSTALL_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-CFGEOF
+# Write config using printf to avoid heredoc encoding issues
+printf 'INSTALL_DIR=%s\nAPI_PORT=%s\nNGINX_PORT=%s\nAPI_HOST=%s\nVENV_DIR=%s\nOS=%s\nNGINX_CONFIGURED=%s\nINSTALL_DATE=%s\n' \
+  "$INSTALL_DIR" "$API_PORT" "$NGINX_PORT" "$API_HOST" "$VENV_DIR" "$OS" "$NGINX_CONFIGURED" \
+  "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  > "$INSTALL_DIR/.install-config"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Done

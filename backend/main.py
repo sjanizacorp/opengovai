@@ -10,6 +10,7 @@ from typing import Optional, List
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -366,6 +367,26 @@ def _calculate_initial_risk(asset: AssetCreate) -> float:
         base += 1.5
     return min(round(base, 1), 10.0)
 
+
+@app.post("/api/v1/frameworks", status_code=201)
+async def register_framework(fw: dict):
+    """Register a custom compliance framework"""
+    from compliance import FRAMEWORK_CONTROLS
+    fw_id = fw.get("id") or fw["label"].lower().replace(" ","_")
+    FRAMEWORK_CONTROLS[fw_id] = {
+        "label": fw.get("label", fw_id),
+        "controls": fw.get("controls", []),
+    }
+    return {"id": fw_id, "label": FRAMEWORK_CONTROLS[fw_id]["label"], "controls": len(FRAMEWORK_CONTROLS[fw_id]["controls"])}
+
+@app.get("/api/v1/frameworks")
+async def list_frameworks():
+    from compliance import FRAMEWORK_CONTROLS
+    return {"frameworks": [
+        {"id": k, "label": v.get("label",k), "controls": len(v.get("controls",[]))}
+        for k,v in FRAMEWORK_CONTROLS.items()
+    ]}
+
 async def seed_demo_data():
     """Seed database with realistic demo data"""
     from database import _db
@@ -373,31 +394,31 @@ async def seed_demo_data():
         return
 
     demo_assets = [
-        {"id": "ASSET-CS001", "name": "Customer Support Chatbot", "model": "claude-3-5-sonnet",
+        {"id": "ASSET-CS001", "name": "[SAMPLE] Customer Support Chatbot", "model": "claude-3-5-sonnet",
          "provider": "Anthropic", "environment": "production", "owner": "AI Platform Team",
          "use_case": "Customer support ticket triage and response", "data_classification": "confidential",
          "autonomy_level": "human_in_loop", "status": "active", "risk_tier": "limited",
          "risk_score": 6.8, "created_at": "2026-01-15T10:00:00", "last_scanned": "2026-03-20T14:22:00",
          "frameworks": ["eu_ai_act", "nist_ai_rmf", "owasp_llm"]},
-        {"id": "ASSET-HR002", "name": "HR Resume Screener", "model": "gpt-4o",
+        {"id": "ASSET-HR002", "name": "[SAMPLE] HR Resume Screener", "model": "gpt-4o",
          "provider": "OpenAI", "environment": "production", "owner": "HR Technology",
          "use_case": "Initial resume screening and candidate ranking", "data_classification": "restricted",
          "autonomy_level": "semi_autonomous", "status": "active", "risk_tier": "high",
          "risk_score": 8.4, "created_at": "2026-02-01T09:00:00", "last_scanned": "2026-03-18T11:00:00",
          "frameworks": ["eu_ai_act", "nist_ai_rmf", "owasp_llm"]},
-        {"id": "ASSET-FIN003", "name": "Fraud Detection Model", "model": "internal-fraud-v3",
+        {"id": "ASSET-FIN003", "name": "[SAMPLE] Fraud Detection Model", "model": "internal-fraud-v3",
          "provider": "Internal", "environment": "production", "owner": "Risk Engineering",
          "use_case": "Real-time transaction fraud scoring", "data_classification": "restricted",
          "autonomy_level": "fully_autonomous", "status": "active", "risk_tier": "high",
          "risk_score": 9.1, "created_at": "2025-11-01T08:00:00", "last_scanned": "2026-03-22T08:00:00",
          "frameworks": ["eu_ai_act", "nist_ai_rmf", "owasp_llm", "iso_42001"]},
-        {"id": "ASSET-MKT004", "name": "Marketing Content Generator", "model": "gpt-4o-mini",
+        {"id": "ASSET-MKT004", "name": "[SAMPLE] Marketing Content Generator", "model": "gpt-4o-mini",
          "provider": "OpenAI", "environment": "staging", "owner": "Marketing Ops",
          "use_case": "Automated email and social media content generation", "data_classification": "internal",
          "autonomy_level": "fully_autonomous", "status": "active", "risk_tier": "minimal",
          "risk_score": 3.2, "created_at": "2026-03-01T12:00:00", "last_scanned": None,
          "frameworks": ["owasp_llm"]},
-        {"id": "ASSET-SHD005", "name": "Shadow AI — Notion AI", "model": "notion-ai",
+        {"id": "ASSET-SHD005", "name": "[SAMPLE] Shadow AI — Notion AI", "model": "notion-ai",
          "provider": "Notion", "environment": "production", "owner": "UNKNOWN",
          "use_case": "Unauthorized document generation by engineering team", "data_classification": "confidential",
          "autonomy_level": "human_in_loop", "status": "shadow", "risk_tier": "high",
@@ -479,20 +500,20 @@ async def seed_demo_data():
     ]
 
     demo_scans = [
-        {"id": "AEGIS-SCAN-20260320-001", "asset_id": "ASSET-CS001", "target": "Customer Support Chatbot",
+        {"id": "AEGIS-SCAN-20260320-001", "asset_id": "ASSET-CS001", "target": "[SAMPLE] Customer Support Chatbot",
          "engines": ["garak", "promptfoo", "pyrit", "opengovai_native"], "status": "completed",
          "progress": 100, "created_at": "2026-03-20T14:00:00", "completed_at": "2026-03-20T14:47:00",
          "checks": ["all"], "compliance_frameworks": ["eu_ai_act", "owasp_llm", "nist_ai_rmf"],
          "findings_count": {"critical": 1, "high": 1, "medium": 1, "low": 0, "info": 3},
          "risk_score": 8.1, "total_probes": 634},
-        {"id": "AEGIS-SCAN-20260318-001", "asset_id": "ASSET-HR002", "target": "HR Resume Screener",
+        {"id": "AEGIS-SCAN-20260318-001", "asset_id": "ASSET-HR002", "target": "[SAMPLE] HR Resume Screener",
          "engines": ["garak", "deepteam", "opengovai_native"], "status": "completed",
          "progress": 100, "created_at": "2026-03-18T11:00:00", "completed_at": "2026-03-18T11:58:00",
          "checks": ["bias_fairness", "agentic_governance", "operational_security"],
          "compliance_frameworks": ["eu_ai_act", "nist_ai_rmf"],
          "findings_count": {"critical": 1, "high": 0, "medium": 1, "low": 0, "info": 2},
          "risk_score": 9.2, "total_probes": 412},
-        {"id": "AEGIS-SCAN-20260322-001", "asset_id": "ASSET-FIN003", "target": "Fraud Detection Model",
+        {"id": "AEGIS-SCAN-20260322-001", "asset_id": "ASSET-FIN003", "target": "[SAMPLE] Fraud Detection Model",
          "engines": ["garak", "promptfoo", "pyrit", "fuzzyai", "opengovai_native"], "status": "completed",
          "progress": 100, "created_at": "2026-03-22T08:00:00", "completed_at": "2026-03-22T09:12:00",
          "checks": ["all"], "compliance_frameworks": ["eu_ai_act", "nist_ai_rmf", "iso_42001"],
@@ -554,3 +575,31 @@ async def seed_demo_data():
         _db.setdefault("workflows", {})[item["id"]] = item
     for item in demo_policies:
         _db.setdefault("policies", {})[item["id"]] = item
+
+
+# ─── Catch-all: serve helpful page if someone hits API port directly ───────────
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/{full_path:path}", response_class=HTMLResponse, include_in_schema=False)
+async def serve_frontend_redirect(full_path: str = ""):
+    # Only intercept non-API paths
+    if full_path.startswith("api/") or full_path in ("docs", "openapi.json", "redoc"):
+        raise HTTPException(status_code=404)
+    fe_port = 3000
+    url = f"http://localhost:{fe_port}/{full_path}"
+    return HTMLResponse(content=f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url={url}">
+<title>OpenGovAI — Redirecting</title>
+<style>body{{font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0F1923;color:#C0CBD8}}.box{{text-align:center;padding:40px;background:#1A2740;border-radius:12px;border:1px solid rgba(255,255,255,0.1)}}.title{{font-size:24px;font-weight:700;color:#fff;margin-bottom:8px}}.sub{{font-size:14px;color:#7A8FA6;margin-bottom:24px}}a{{color:#0078D4;font-size:16px;font-weight:600}}</style>
+</head>
+<body>
+<div class="box">
+  <div class="title">OpenGovAI</div>
+  <div class="sub">You reached the API server (port 8000).<br>The dashboard runs on port {fe_port}.</div>
+  <a href="{url}">Click here if not redirected automatically →</a>
+</div>
+</body>
+</html>""", status_code=200)
