@@ -1,0 +1,42 @@
+services:
+  api:
+    image: opengovai-client-api:5.0.0-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
+    pull_policy: never
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      OPENGOVAI_DATA_DIR: /app/data
+    volumes:
+      - api-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  frontend:
+    image: opengovai-client-web:5.0.0-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+
+  nginx:
+    image: opengovai-client-proxy:5.0.0-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
+    pull_policy: never
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PORT:-3000}:80"
+    depends_on:
+      - api
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ && wget -q -O /dev/null http://127.0.0.1/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  api-data:
