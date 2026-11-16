@@ -108,6 +108,55 @@ the application’s files. Set `AWS_PROFILE` and mount credential configuration
 read-only when using a named profile. Check a runner’s exit status and verify
 its new data in OpenGovAI.
 
+## Import or create a policy
+
+1. Sign in as an administrator and open **Policies**. Choose **Import
+   document** to load a text-based PDF, Word `.docx`, or Excel `.xlsx` up to
+   5 MB. Use **Download Excel template** for a new custom policy.
+2. For the template, replace the sample values on **Policy** and enter one
+   control ID per row in **Controls**. Use the framework and control IDs on
+   **Catalog**. Save the completed workbook as `.xlsx` and upload it.
+3. Select **Extract text locally** for local processing or choose a configured
+   AI engine for optional drafting. Review the extracted text and suggested
+   controls, edit the policy, and publish.
+
+![A template imported into the editable policy review screen](screenshots/policy-document-import.png)
+
+### Connect a local or hosted language model
+
+1. In **Policies → Policy AI settings**, select **Add connection**. Pick
+   OpenAI, Google Gemini, or an OpenAI-compatible endpoint approved by the
+   deployment operator.
+2. Enter a name, the provider's model ID, and its API key if required. Save
+   and select **Test connection** to check that the engine can return a draft
+   from a sample prompt.
+3. In **Policies → Import document**, select the connection under **Drafting
+   method** and authorize sharing extracted text. Review the draft and
+   suggested controls. Structured Excel templates are imported locally.
+
+![Policy AI settings after testing a local model](screenshots/policy-ai-settings.png)
+
+To enable saved credentials, set `OPENGOVAI_POLICY_AI_STATE_KEY` in `.env`.
+Generate a Fernet key with the installed API container's Python:
+
+```sh
+docker compose exec -T api python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+```
+
+Protect the key and retain it securely for backup restores. To add a local
+or custom model server, register its base URL in `.env`, for example:
+
+```dotenv
+OPENGOVAI_POLICY_AI_ENDPOINTS='[{"id":"ollama","label":"Local Ollama","base_url":"http://host.docker.internal:11434/v1","allow_http":true}]'
+```
+
+Use an address the API container can reach. Docker Desktop provides
+`host.docker.internal`. In a shared Docker network, use the model server's
+service name. Private HTTP endpoints support keyless requests. Configure
+HTTPS for connections that use API keys. Set
+`OPENGOVAI_POLICY_AI_ALLOW_PUBLIC=false` if you want to disable the built-in
+public endpoints. Apply changes with `docker compose up -d --wait`.
+
 ## Configure runtime monitoring and enforcement
 
 1. Publish a control policy in **Policies**. Bind it in the asset’s **Release

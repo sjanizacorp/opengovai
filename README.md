@@ -4,13 +4,13 @@
 
 OpenGovAI helps organizations decide whether an AI deployment is ready for release and whether it still meets policy after launch. It ties the decision to an exact deployment version, the controls and evidence that apply to it, the people who approved it, and the runtime conditions they rely on. When something changes, operators can identify which release is affected, why it is blocked, and what needs to be reviewed again.
 
-[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.2) · [Install and operate](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
+[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.3) · [Install and operate](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
 
 ![OpenGovAI workspace by Aniza Inc showing active assets, control assessments, findings, and reviews](v5/screenshots/workspace-overview.png)
 
 ## Contents
 
-[Release workflow](#release-workflow) · [Architecture](#deployment-architecture) · [Governance catalogs](#governance-catalogs) · [Integrations](#integrations) · [API and enforcement](#api-and-enforcement) · [Access and operations](#access-and-operations) · [Quick start](#quick-start)
+[Release workflow](#release-workflow) · [Architecture](#deployment-architecture) · [Governance catalogs](#governance-catalogs) · [Policy import and model setup](#policy-import-and-model-setup) · [Integrations](#integrations) · [API and enforcement](#api-and-enforcement) · [Access and operations](#access-and-operations) · [Quick start](#quick-start)
 
 ## Release workflow
 
@@ -74,8 +74,6 @@ flowchart LR
 
 OpenGovAI provides versioned assessment catalogs. A policy selects a framework and the controls relevant to a deployment. An organization determines which requirements apply and how to assess them.
 
-### Available in the current client release
-
 | Catalog | Assessment focus |
 | --- | --- |
 | **EU AI Act** | AI system scope, risk classification, and applicable obligations |
@@ -83,20 +81,26 @@ OpenGovAI provides versioned assessment catalogs. A policy selects a framework a
 | **ISO/IEC 42001:2023** | AI management system responsibilities and controls |
 | **OWASP Top 10 for LLM Applications (2025)** | Application security risks specific to LLM systems |
 | **21 CFR Part 11** | Electronic record and signature controls relevant to FDA-regulated settings |
-
-### Upcoming policy import update
-
-The following catalogs and the document import workflow are implemented and tested in the development workspace. They are pending a client release.
-
-| Catalog | Added coverage |
-| --- | --- |
 | **NIST AI 600-1** | Generative AI risks, including confabulation, bias, privacy, security, and upstream components |
 | **ISO/IEC 23894:2023** | AI risk identification, treatment, acceptance, and monitoring |
 | **ISO/IEC 42005:2025** | Assessment of impacts on people, groups, and deployment contexts |
 | **ISO/IEC 38507:2022** | Governing-body oversight, accountability, and escalation |
 | **OECD Due Diligence Guidance for Responsible AI (2026)** | Identification, prevention, tracking, communication, and remediation of adverse impacts |
 
-The update adds an admin workflow for importing text-based PDFs, Word `.docx` files, and Excel `.xlsx` workbooks. Admins can start from a downloadable Excel template, extract text locally, or opt in to a configured OpenAI-compatible engine for drafting. The imported text and suggested controls remain editable before publication.
+## Policy import and model setup
+
+1. Sign in as a workspace administrator and open **Policies → Import document**. Choose a text-based PDF, Word `.docx`, or Excel `.xlsx` up to 5 MB. Use **Download Excel template** to start from a structured policy workbook. Apply OCR separately to scanned PDFs.
+2. To use an LLM, open **Policies → Policy AI settings → Add connection**. Choose a built-in OpenAI or Google Gemini endpoint, or an OpenAI-compatible server approved by the deployment operator, such as Ollama or LM Studio. Enter the model ID and its API key if required, then select **Save connection → Test connection**. The test sends a synthetic policy prompt.
+3. Return to **Import document**, select the framework and your connection, and authorize sharing the extracted text. Compare the proposed name, policy text, and controls to the source before publishing. Local text extraction is the default. Structured Excel templates are parsed locally.
+
+The API sends extracted text and the selected framework's controls to the chosen model. The deployment operator can register local or custom endpoints with `OPENGOVAI_POLICY_AI_ENDPOINTS`, enable encrypted credential storage with `OPENGOVAI_POLICY_AI_STATE_KEY`, and disable the built-in public presets with `OPENGOVAI_POLICY_AI_ALLOW_PUBLIC=false`. Follow the [client setup guide](v5/CLIENT-GUIDE.md#connect-a-local-or-hosted-language-model) for Docker networking, credentials, and restart steps.
+
+<details>
+<summary>See a configured local model</summary>
+
+![Policy AI settings with a local connection and a successful draft test](v5/screenshots/policy-ai-settings.png)
+
+</details>
 
 ## Integrations
 
@@ -165,7 +169,7 @@ For production, verify HTTPS ingress, role and unit isolation, readiness checks,
 
 ## Quick start
 
-The [v5.0.2 offline client archive](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.2/opengovai-5.0.2-client.tar.gz) contains prebuilt images for x86-64 and ARM64 Linux Docker engines. Docker Desktop can run it in Linux-container mode. If you already have the [expanded client files](v5/README.md), download the image archive for your architecture from the [release page](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.2).
+The [v5.0.3 offline client archive](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.3/opengovai-5.0.3-client.tar.gz) contains prebuilt images for x86-64 and ARM64 Linux Docker engines. Docker Desktop can run it in Linux-container mode. If you already have the [expanded client files](v5/README.md), download the image archive for your architecture from the [release page](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.3).
 
 1. Extract the complete client archive. With Docker and Compose running, open the extracted directory and run `./install.sh`. The installer verifies its bundled image checksum and prints the dashboard URL.
 2. From that directory, create an administrator and a separate reviewer.
@@ -182,6 +186,6 @@ The [v5.0.2 offline client archive](https://github.com/sjanizacorp/opengovai/rel
 | Manual | Start here when you need to… |
 | --- | --- |
 | [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) | Install, manage access, run day-to-day work, or troubleshoot and recover |
-| [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) | Connect cloud or VMware inventory, publish policies, configure telemetry, or set up identity and storage |
+| [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) | Connect cloud or VMware inventory, set up policy AI, configure telemetry, or set up identity and storage |
 | [API PDF](v5/manuals/OpenGovAI-API.pdf) | Check readiness, publish inventory or evidence, or enforce release checks in CI |
 | [Workspace user guide](v5/USER-GUIDE.md) | Get a task-by-task walkthrough in Markdown |
