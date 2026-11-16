@@ -1,13 +1,15 @@
 # OpenGovAI v5 client deployment
 
-Download the [complete offline v5.0.1 client package](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.1/opengovai-5.0.1-client.tar.gz), extract it, and run `./install.sh` with Docker and Docker Compose available.
+**OpenGovAI is authored by Aniza Inc.**
 
-If you already have this expanded deployment directory, download the image archive for your Docker engine from the [v5.0.1 release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.1). Save it alongside `install.sh`.
+Download the [complete offline v5.0.2 client package](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.2/opengovai-5.0.2-client.tar.gz), extract it, and run `./install.sh` with Docker and Docker Compose available.
+
+If you already have this expanded deployment directory, download the image archive for your Docker engine from the [v5.0.2 release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.2). Save it alongside `install.sh`.
 
 | Docker engine architecture | Required file |
 | --- | --- |
-| x86-64 | [images-amd64.tar.gz](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.1/images-amd64.tar.gz) |
-| ARM64 | [images-arm64.tar.gz](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.1/images-arm64.tar.gz) |
+| x86-64 | [images-amd64.tar.gz](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.2/images-amd64.tar.gz) |
+| ARM64 | [images-arm64.tar.gz](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.2/images-arm64.tar.gz) |
 
 The installer verifies the image archive against the included SHA-256 checksum.
 

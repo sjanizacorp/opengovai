@@ -1,5 +1,7 @@
 # OpenGovAI user manual
 
+**OpenGovAI is authored by Aniza Inc.**
+
 - [Sign in and find your work](#sign-in-and-find-your-work)
 - [Register and version an asset](#register-and-version-an-asset)
 - [Assess controls and resolve findings](#assess-controls-and-resolve-findings)

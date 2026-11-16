@@ -1,50 +1,58 @@
 # OpenGovAI v5
 
-**A self-hosted workspace for governing AI deployments from inventory through production.**
+**Self-hosted AI deployment governance, authored by Aniza Inc.**
 
-When a model changes, the people approving it need to know exactly what is being deployed, who owns it, which controls apply, what evidence supports the decision, and whether the release still meets policy. OpenGovAI brings those records into one workspace and ties them to a specific deployment version.
+OpenGovAI helps an organization answer three operational questions about an AI system. **What version is deployed? Who approved it and on what evidence? Does it still meet the conditions for release or continued operation?** It gives model owners, reviewers, and platform operators a shared record for making and enforcing those decisions.
 
-**Get started** with the [latest v5 client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.1), browse the [deployment files](v5/README.md), or download the illustrated [Administration](v5/manuals/OpenGovAI-Administration.pdf), [Configuration](v5/manuals/OpenGovAI-Configuration.pdf), and [API](v5/manuals/OpenGovAI-API.pdf) manuals.
+The objective is to make AI governance part of the release process. Each decision is anchored to an identifiable deployment version, with its owner, model, environment, and release reference. The workspace connects that version to the applicable policy, control evidence, upstream dependencies, and review history. Delivery pipelines and inference gateways can use the resulting decision at the point where they promote a release or forward traffic.
 
-![OpenGovAI v5 dashboard showing the registry, assessments, findings, and review queue](v5/screenshots/workspace-overview.png)
+**Start here**
 
-## What you can do with v5
+[Download the client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.2) · [Explore the deployment files](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
 
-| Task | What OpenGovAI records or checks |
+![OpenGovAI by Aniza Inc showing the AI governance overview, work queue, and recent activity](v5/screenshots/workspace-overview.png)
+
+## What a governed release looks like
+
+Consider a demand-forecasting model moving from build 2.3 to 2.4. Its owner registers the new deployment version, including the release reference and the dataset version it uses. The delivery job submits the evaluation results for 2.4. A reviewer checks the applicable controls and records a decision against that version. Before promotion, CI asks OpenGovAI whether 2.4 meets the current release policy. The approval receipt for 2.3 remains available for audit.
+
+After release, a monitor receives aggregate observations such as inference latency or changes in output distribution. A stale or breached signal can open an incident and trigger reassessment. The operator can trace the incident back to the monitored version, policy, and approval. This gives the same deployment record a role before and after promotion.
+
+## Capabilities
+
+| Capability | How it works in practice |
 | --- | --- |
-| Register AI deployments | Track owners, models, environments, immutable release references, and version history. Connect a feed to refresh inventory and register material changes. |
-| Collect evidence | Record assessments, import measured evaluation results, request version-linked evidence from vendors, and retain the original source references. |
-| Apply release policy | Choose required controls, evidence and inventory age limits, dependency requirements, monitoring requirements, and approval stages. Bind the policy to the deployment. |
-| Review and approve | Route decisions to eligible reviewers. Retain the approved version, policy, evidence snapshot, and decision digest together. |
-| Check and monitor production | Run a governance scan, check the release from CI, or have a trusted gateway check the approved deployment before forwarding inference requests. |
-| Remediate and investigate | Assign findings, record retests, review stale or breached runtime observations, and track reassessment when required. |
+| **Deployment inventory and version history** | Register an AI asset manually or connect a feed. Each record can identify the owner, intended use, model, provider, environment, and immutable deployment reference. Material changes create a new version, preserving the history of earlier releases. |
+| **Policies and control assessments** | Select a control framework, choose required controls, and define evidence and inventory freshness limits. Record assessments directly or import measured evaluation results. Reviewed evidence mappings can reuse applicable evidence across frameworks for the same version. |
+| **Upstream dependency tracking** | Connect deployed versions to pinned versions of upstream models, datasets, services, or tools. Inspect direct and transitive dependencies and flag changed versions that require attention. |
+| **Review routing and approval receipts** | Route version-specific requests through configurable stages with assigned reviewers and deadlines. The approval records the decision, policy, and evidence snapshot with a digest that can be exported and retained with the release. |
+| **Governance scans and findings** | Run an on-demand check of a version against its release conditions. Inspect the blockers, assign failed controls to an owner, record a retest, and complete a new review where reassessment is required. |
+| **Runtime monitoring and reassessment** | Set scalar thresholds or distribution baselines, minimum sample counts, and signal age limits. Track observations and incidents for the deployed version and route required reassessments back into review. |
+| **Enforcement in CI and at the gateway** | Check the exact asset, version, and release reference before promotion. For live enforcement, configure a trusted inference gateway to check a version-bound runtime credential before forwarding requests. |
+| **Vendor evidence and audit** | Issue expiring, single-use questionnaires tied to an asset version. Preserve submitted responses with the applicable evidence. Administrators and auditors can inspect activity, and operators can forward audit events to an external collector. |
+| **Access and deployment operations** | Assign workspace roles and business units. Configure local accounts or OIDC with optional SCIM provisioning. Use the included Docker package with SQLite or a configured PostgreSQL database. |
 
-## How a deployment moves through the workspace
+## Connect your deployment environment
 
-1. **Register it.** Enter the deployment manually or connect it to a pipeline. Keep a stable asset identity and record an immutable release reference for each material version.
-2. **Bind the required policy.** Define the controls, freshness limits, and review stages for that deployment. Where needed, record the exact upstream versions of models, datasets, services, or tools.
-3. **Collect and review evidence.** Record assessments, import evaluation results, or request vendor evidence. A separate eligible reviewer inspects the evidence and records the decision.
-4. **Check the release.** Run a governance scan in the workspace. In automated delivery, call the release gate immediately before promotion and use the returned result to allow or stop the job.
-5. **Continue monitoring.** Send aggregate observations tied to the deployment version. Investigate incidents and complete any required reassessment when a signal becomes stale or breaches a threshold.
+| Environment | Inventory connection |
+| --- | --- |
+| **AWS** | A read-only runner discovers in-service Amazon SageMaker endpoints and Amazon Bedrock provisioned throughput deployments in configured regions. |
+| **Azure, Google Cloud, IBM Cloud, and Oracle Cloud** | The guided setup captures the deployment identity and issues a scoped token. A CI or scheduled job publishes deployment metadata and the operator verifies receipt in the workspace. |
+| **VMware ESXi and vCenter** | A read-only connector verifies the selected VM by BIOS UUID and refreshes inventory while the VM is connected and powered on. The application pipeline provides the model and release reference. |
+| **MLflow, Prometheus, and custom pipelines** | MLflow can supply registry inventory and measured evaluation evidence. Prometheus can supply aggregate observations. A versioned API lets approved publishers submit data and check release decisions. |
 
-A material deployment change creates a new version. Historical evidence and approval receipts stay with the version they covered, so operators can inspect what was approved and when.
+## Who uses OpenGovAI
 
-## Deployment environments
+- **Model owners and delivery teams** maintain deployment identity, supply evidence, request review, and consume release decisions from CI.
+- **Governance and model-risk teams** set policy, assess controls, route approvals, and investigate unresolved findings.
+- **Platform operators** manage access, connect inventory and telemetry, configure gateways, and coordinate recovery.
+- **Auditors and assurance teams** inspect retained evidence, decision receipts, and workspace activity in their authorized business unit.
 
-- **AWS.** The included read-only runner discovers in-service SageMaker endpoints and Bedrock provisioned throughput deployments in the configured regions.
-- **Microsoft Azure, Google Cloud, IBM Cloud, and Oracle Cloud.** The guided setup walks an administrator through identifying a deployment, issuing a scoped credential, publishing inventory through CI or a scheduled job, and verifying receipt in the workspace.
-- **VMware ESXi and vCenter.** A read-only runner finds the selected VM by BIOS UUID and refreshes inventory while that VM is connected and powered on. The application pipeline supplies the model and release reference.
-- **Existing tools and custom pipelines.** MLflow can provide registry inventory and measured evaluation evidence. Prometheus can supply aggregate runtime observations. A versioned API supports custom publishers and release checks.
+## Start with one staging deployment
 
-## Built for the people involved in a release
-
-Platform operators configure deployments, access, telemetry, and backups. Model owners register versions and request review. Reviewers assess evidence and make decisions. Auditors can inspect records and export available evidence within their business unit. OpenGovAI supports local accounts, OIDC single sign-on, SCIM provisioning, and unit-scoped access.
-
-## Install the client and try a staging release
-
-1. Download the [offline v5.0.1 client archive](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.1/opengovai-5.0.1-client.tar.gz). It includes prebuilt images for x86-64 and ARM64 Docker engines.
+1. Download the [offline v5.0.2 client bundle](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.2/opengovai-5.0.2-client.tar.gz). It includes prebuilt x86-64 and ARM64 Docker images.
 2. Extract the archive and run `./install.sh` with Docker and Docker Compose available.
-3. Follow the [Administration Manual](v5/manuals/OpenGovAI-Administration.pdf) to create an administrator and a separate reviewer in the same unit.
-4. Register a staging deployment and complete one cycle from inventory and policy through evidence, approval, and a governance scan. Use the [Configuration Manual](v5/manuals/OpenGovAI-Configuration.pdf) for provider setup and the [API Manual](v5/manuals/OpenGovAI-API.pdf) for integration examples.
+3. Use the [Administration Manual](v5/manuals/OpenGovAI-Administration.pdf) to create an administrator and a separate reviewer. Use the [Configuration Manual](v5/manuals/OpenGovAI-Configuration.pdf) to connect inventory and bind a policy.
+4. Register one staging deployment, submit the required evidence, finish a review, and run a governance scan. Use the [API Manual](v5/manuals/OpenGovAI-API.pdf) to verify a feed or connect the release check to CI.
 
-The three manuals include screenshots from the workspace, guided procedures, expected results, and troubleshooting. Start with Administration for account and daily workflow tasks, Configuration for setup and operator handoffs, and API for feed and release integrations.
+The manuals include screenshots, expected results, and recovery steps for operators.

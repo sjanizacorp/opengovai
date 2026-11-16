@@ -1,5 +1,7 @@
 # OpenGovAI client deployment
 
+**OpenGovAI is authored by Aniza Inc.**
+
 This release includes deployment images for x86-64 and ARM64 Linux Docker
 engines. Docker Desktop can run the release in Linux-container mode. Use a
 local deployment terminal with Docker Engine and the Compose plugin available.
