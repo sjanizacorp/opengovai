@@ -4,6 +4,15 @@ This release includes deployment images for x86-64 and ARM64 Linux Docker
 engines. Docker Desktop can run the release in Linux-container mode. Use a
 local deployment terminal with Docker Engine and the Compose plugin available.
 
+## Illustrated operator manuals
+
+- [Administration](manuals/OpenGovAI-Administration.pdf) covers first sign-in,
+  accounts, assets, reviews, scans, and recovery.
+- [Configuration](manuals/OpenGovAI-Configuration.pdf) covers cloud and VMware
+  setup, policy, monitoring, identity, and storage.
+- [API](manuals/OpenGovAI-API.pdf) walks through readiness, inventory,
+  evaluation, runtime observations, and release checks.
+
 ## Install and sign in
 
 1. Extract the client archive to a directory you administer and open a terminal
