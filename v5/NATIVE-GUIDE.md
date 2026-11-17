@@ -12,7 +12,8 @@ a compatible interpreter explicitly, set `OPENGOVAI_PYTHON`.
 
 Run `./install.sh` and choose the installation folder when prompted.
 For unattended setup, pass `--install-dir "/path/to/OpenGovAI"`. The same
-flag works with the standalone `install-native.sh`. Setup creates the first
+flag works with the standalone `install.sh`. The standalone downloads the
+matching package after you select native or Docker. Setup creates the first
 administrator and optionally connects a running local model for policy
 drafting. It prints the dashboard address and records the paths in
 `setup.log`. The dashboard listens on the loopback interface by default.
