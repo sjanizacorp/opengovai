@@ -4,13 +4,13 @@
 
 OpenGovAI helps organizations decide whether an AI deployment is ready for release and whether it still meets policy after launch. It ties the decision to an exact deployment version, the controls and evidence that apply to it, the people who approved it, and the runtime conditions they rely on. When something changes, operators can identify which release is affected, why it is blocked, and what needs to be reviewed again.
 
-[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.0) · [Install and operate](#quick-start) · [Administration PDF](manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](manuals/OpenGovAI-Configuration.pdf) · [API PDF](manuals/OpenGovAI-API.pdf)
+[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.1) · [Install and operate](#quick-start) · [Administration PDF](manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](manuals/OpenGovAI-Configuration.pdf) · [API PDF](manuals/OpenGovAI-API.pdf)
 
 ![OpenGovAI workspace by Aniza Inc showing active assets, control assessments, findings, and reviews](screenshots/workspace-overview.png)
 
 ## Contents
 
-[Release workflow](#release-workflow) · [Architecture](#deployment-architecture) · [Governance catalogs](#governance-catalogs) · [Policy import and model setup](#policy-import-and-model-setup) · [Local model governance](#govern-a-local-model) · [Integrations](#integrations) · [API and enforcement](#api-and-enforcement) · [Access and operations](#access-and-operations) · [Quick start](#quick-start)
+[Release workflow](#release-workflow) · [Architecture](#deployment-architecture) · [Governance catalogs](#governance-catalogs) · [Policy import and model setup](#policy-import-and-model-setup) · [AWS setup](#connect-an-aws-deployment) · [Local model governance](#govern-a-local-model) · [Integrations](#integrations) · [API and enforcement](#api-and-enforcement) · [Access and operations](#access-and-operations) · [Quick start](#quick-start)
 
 ## Release workflow
 
@@ -126,6 +126,26 @@ The installer can also set up and test an existing keyless Ollama, LM Studio, or
 
 </details>
 
+## Connect an AWS deployment
+
+In **Deployment setup**, choose **Amazon Web Services**, then select
+**SageMaker AI endpoint** or **Bedrock Provisioned Throughput**. The
+wizard shows a full ARN example and instructions for locating it, along
+with examples for the model, team, and deployment version.
+
+Create the connection, download `inventory.json`, and run the scoped AWS
+connector with a read-only profile or workload role. It reads the model and
+deployment configuration from the configured AWS resource before publishing.
+The wizard shows the native or Docker command and the permissions needed.
+See the [AWS setup steps](CLIENT-GUIDE.md#connect-an-aws-deployment).
+
+<details>
+<summary>See the SageMaker setup form</summary>
+
+![SageMaker setup shows an ARN example and field-by-field guidance](screenshots/aws-setup.png)
+
+</details>
+
 ## Govern a local model
 
 Choose **Deployment setup → Local language model**. Enter the model ID,
@@ -195,12 +215,13 @@ the first install. Linux requires glibc 2.36 or later.
 
 | System | Apple Silicon or ARM64 | Intel or x86-64 |
 | --- | --- | --- |
-| macOS | [Apple Silicon](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-macos-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-macos-amd64.tar.gz) |
-| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-linux-amd64.tar.gz) |
+| macOS | [Apple Silicon (M-series)](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-macos-apple-silicon-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-macos-intel-x86-64.tar.gz) |
+| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-linux-x86-64.tar.gz) |
 
-From an expanded v5 checkout, run `./install-native.sh` to detect the host,
-verify the matching package, and start setup. You can also extract the
-matching archive and run `./install.sh`. Setup prints the
+Download the [standalone native installer](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/install-native.sh)
+and run `bash install-native.sh`. It detects macOS or the Linux distribution
+and CPU, selects the matching package, and verifies its checksum. Every
+native archive also includes `install-native.sh` beside `install.sh`. Setup prints the
 dashboard address and writes `setup.log`. Use `./start.sh`, `./stop.sh`,
 and `./uninstall.sh` to manage the installation. See the
 [native client guide](NATIVE-GUIDE.md).
@@ -211,8 +232,8 @@ Start Docker with a Linux engine. Use Bash on macOS, Linux, or Windows with WSL 
 
 | Docker engine architecture | One offline client download |
 | --- | --- |
-| x86-64 | [Download x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-client-amd64.tar.gz) |
-| ARM64 | [Download ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-client-arm64.tar.gz) |
+| x86-64 | [Download x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-client-amd64.tar.gz) |
+| ARM64 | [Download ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-client-arm64.tar.gz) |
 
 1. Extract the download and run `./install.sh`. From the expanded v5 deployment directory, run `./install.sh --download` to detect the Docker engine and fetch its bundle automatically.
 2. Choose the dashboard port and optionally connect a running Ollama, LM Studio, or compatible local model server. Provide the model ID and base URL. Setup tests the connection with a sample policy.

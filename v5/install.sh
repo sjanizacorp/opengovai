@@ -138,7 +138,7 @@ chmod 600 "$SETUP_LOG"
 SETUP_INTERACTIVE=false
 [[ -t 0 ]] && SETUP_INTERACTIVE=true
 download=false
-release='5.1.0'
+release='5.1.1'
 requested_port=''
 while (( $# )); do
     case "$1" in

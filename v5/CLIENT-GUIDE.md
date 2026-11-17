@@ -165,6 +165,37 @@ HTTPS for connections that use API keys. Set
 `OPENGOVAI_POLICY_AI_ALLOW_PUBLIC=false` if you want to disable the built-in
 public endpoints. Apply changes with `docker compose up -d --wait`.
 
+## Connect an AWS deployment
+
+1. Open **Deployment setup → Amazon Web Services → Continue**.
+2. Choose **SageMaker AI endpoint** or **Bedrock Provisioned Throughput**.
+   In the AWS console, open the deployed resource and copy its ARN. For
+   SageMaker, an example is
+   `arn:aws:sagemaker:us-east-1:123456789012:endpoint/support-assistant`.
+   For Bedrock, use the Provisioned Throughput ARN, for example
+   `arn:aws:bedrock:us-east-1:123456789012:provisioned-model/abc123def456`.
+3. Fill in your deployment name, model identifier, owning team, environment,
+   and release reference. The form shows examples inline. The runner replaces
+   the model and release reference with the metadata it reads from AWS.
+4. Create the connection and download `inventory.json`. On your runner, set
+   `OPENGOVAI_URL` to the workspace URL and securely supply the issued
+   `OPENGOVAI_INTEGRATION_TOKEN`. Use your existing AWS workload role or AWS
+   profile on the runner. The guided connector uses `sagemaker:DescribeEndpoint`
+   and `sagemaker:DescribeEndpointConfig`, or
+   `bedrock:GetProvisionedModelThroughput` for Bedrock.
+5. Run the command below and select **Verify connection** in the wizard.
+   The connector reads the region from the ARN and publishes inventory when
+   AWS reports the configured resource as `InService`.
+
+```sh
+docker compose run --rm --no-deps --env-from-file aws-runner.env \
+  -v "$PWD/inventory.json:/input/inventory.json:ro" api opengovai aws-sync --manifest /input/inventory.json
+```
+
+Use HTTPS for the workspace URL reachable by Docker. Put the OpenGovAI
+settings in a protected `aws-runner.env` file. Provide AWS credentials to
+the runner through your workload role or an approved profile.
+
 ## Govern a local language model
 
 Create a **Local language model** connection in **Deployment setup**, then

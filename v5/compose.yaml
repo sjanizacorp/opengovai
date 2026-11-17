@@ -1,6 +1,6 @@
 services:
   api:
-    image: opengovai-client-api:5.1.0-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
+    image: opengovai-client-api:5.1.1-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
     pull_policy: never
     restart: unless-stopped
     env_file: .env
@@ -18,7 +18,7 @@ services:
       start_period: 10s
 
   frontend:
-    image: opengovai-client-web:5.1.0-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
+    image: opengovai-client-web:5.1.1-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
     pull_policy: never
     restart: unless-stopped
     depends_on:
@@ -26,7 +26,7 @@ services:
         condition: service_healthy
 
   nginx:
-    image: opengovai-client-proxy:5.1.0-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
+    image: opengovai-client-proxy:5.1.1-${OPENGOVAI_IMAGE_ARCH:?Run ./install.sh first}
     pull_policy: never
     restart: unless-stopped
     ports:
