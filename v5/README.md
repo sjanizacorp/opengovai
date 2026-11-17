@@ -4,7 +4,7 @@
 
 OpenGovAI helps organizations decide whether an AI deployment is ready for release and whether it still meets policy after launch. It ties the decision to an exact deployment version, the controls and evidence that apply to it, the people who approved it, and the runtime conditions they rely on. When something changes, operators can identify which release is affected, why it is blocked, and what needs to be reviewed again.
 
-[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.3) · [Install and operate](#quick-start) · [Administration PDF](manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](manuals/OpenGovAI-Configuration.pdf) · [API PDF](manuals/OpenGovAI-API.pdf)
+[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.4) · [Install and operate](#quick-start) · [Administration PDF](manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](manuals/OpenGovAI-Configuration.pdf) · [API PDF](manuals/OpenGovAI-API.pdf)
 
 ![OpenGovAI workspace by Aniza Inc showing active assets, control assessments, findings, and reviews](screenshots/workspace-overview.png)
 
@@ -102,6 +102,8 @@ The API sends extracted text and the selected framework's controls to the chosen
 
 </details>
 
+The installer can also set up and test an existing keyless Ollama, LM Studio, or compatible server. A passing connection appears as **Local policy model** in the import picker.
+
 ## Integrations
 
 | Environment or tool | Connection method | What to supply |
@@ -169,24 +171,19 @@ For production, verify HTTPS ingress, role and unit isolation, readiness checks,
 
 ## Quick start
 
-The [v5.0.3 offline client archive](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.3/opengovai-5.0.3-client.tar.gz) contains prebuilt images for x86-64 and ARM64 Linux Docker engines. Docker Desktop can run it in Linux-container mode. To install using this directory, download the image archive for your Docker engine and save it alongside `install.sh`. Then run `./install.sh`.
+Start Docker with a Linux engine. Use Bash on macOS, Linux, or Windows with WSL and Docker integration.
 
-| Docker engine architecture | Required file |
+| Docker engine architecture | One offline client download |
 | --- | --- |
-| x86-64 | [images-amd64.tar.gz](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.3/images-amd64.tar.gz) |
-| ARM64 | [images-arm64.tar.gz](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.3/images-arm64.tar.gz) |
+| x86-64 | [Download x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.4/opengovai-5.0.4-client-amd64.tar.gz) |
+| ARM64 | [Download ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.4/opengovai-5.0.4-client-arm64.tar.gz) |
 
-1. Extract the complete client archive. With Docker and Compose running, open the extracted directory and run `./install.sh`. The installer verifies its bundled image checksum and prints the dashboard URL.
-2. From that directory, create an administrator and a separate reviewer.
+1. Extract the download and run `./install.sh`. From the expanded v5 deployment directory, run `./install.sh --download` to detect the Docker engine and fetch its bundle automatically.
+2. Choose the dashboard port and optionally connect a running Ollama, LM Studio, or compatible local model server. Provide the model ID and base URL. Setup tests the connection with a sample policy.
+3. Create the initial administrator. A username can be one character and the minimum password length is 12 characters. Open the printed dashboard URL, typically `http://127.0.0.1:3000`.
+4. Check `setup.log` for installation progress, the dashboard and API addresses, configuration paths, and operational commands. Existing administrators and settings are preserved when rerunning setup.
 
-   ```sh
-   docker compose exec api opengovai manage create-user \
-     governance-admin --role admin --unit operations
-   docker compose exec api opengovai manage create-user \
-     release-reviewer --role reviewer --unit operations
-   ```
-
-3. Sign in at the printed address, typically `http://127.0.0.1:3000`. Register one staging deployment or start with **Cloud setup**. Publish and bind a policy, record an assessment, request review, and run a governance scan.
+The compact downloads contain one platform image, the installer and runtime configuration, and the three PDF manuals. The [deployment guide](CLIENT-GUIDE.md#install-and-sign-in) includes unattended setup and upgrade instructions.
 
 | Manual | Start here when you need to… |
 | --- | --- |

@@ -1,3 +1,5 @@
 .env
 *.env
 images-*.tar.gz
+
+setup.log

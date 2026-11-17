@@ -17,21 +17,29 @@ local deployment terminal with Docker Engine and the Compose plugin available.
 
 ## Install and sign in
 
-1. Extract the client archive to a directory you administer and open a terminal
-   there. Run `./install.sh`. It checks the image archive and starts the
-   prebuilt services using the Docker engine on this host.
-2. Create an administrator and an independent reviewer in the same business unit:
+1. Start Docker on macOS, Linux, or Windows with WSL integration. Extract the
+   client archive and run `./install.sh`. In the expanded GitHub `v5`
+   directory, use `./install.sh --download` to fetch the matching download.
+2. Optionally connect an existing Ollama, LM Studio, or keyless OpenAI-compatible
+   server. Enter its base URL and exact model ID. The installer sends a test
+   prompt and records the result in `setup.log`. On native Linux Docker, the
+   default `opengovai-model-host` points to the Docker host. Bind the server
+   to an interface reachable by that engine. Docker Desktop uses
+   `host.docker.internal`.
+3. Choose a username, business unit, and a password of at least 12 characters.
+   Open the printed URL and sign in. Progress and the paths to configuration,
+   the installer, and operational commands appear in `setup.log`.
+4. Create an independent reviewer when you are ready to request approvals.
+   Use the same unit as your administrator.
 
    ```sh
-   docker compose exec api opengovai manage create-user governance-admin --role admin --unit operations
-   docker compose exec api opengovai manage create-user release-reviewer --role reviewer --unit operations
+   docker compose exec api opengovai manage create-user release-reviewer --role reviewer --unit default
    ```
 
-3. Open the printed dashboard URL and sign in. Use the [user manual](USER-GUIDE.md)
-   for registration, assessments, findings, approvals, and scans. The dashboard
-   defaults to `127.0.0.1:3000`. Change `PORT` in `.env` if required and run
-   `docker compose up -d --wait`. For remote access, use a TLS ingress and enable
-   `OPENGOVAI_SECURE_COOKIE=true` before opening access.
+Set `PORT` in `.env` to change the dashboard port. For remote access, use TLS
+ingress and enable `OPENGOVAI_SECURE_COOKIE=true`. For unattended setup, pass
+`--non-interactive --admin-password-file FILE` and optionally `--admin USER`
+and `--unit UNIT`. Use `--skip-admin` when provisioning accounts separately.
 
 ### Accounts and directory access
 
