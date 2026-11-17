@@ -63,7 +63,7 @@ launch. Protect configuration and credentials as deployment secrets.
 
 ## Connect inventory
 
-1. An administrator opens **Cloud setup** and selects Azure Machine Learning,
+1. An administrator opens **Deployment setup** and selects Azure Machine Learning,
    Google Cloud Vertex AI, IBM Cloud watsonx.ai, Oracle Cloud Data Science, or
    VMware ESXi. Enter the identifier requested by the wizard, the deployed
    model, owning team, environment, and the immutable deployment reference.
@@ -164,6 +164,28 @@ service name. Private HTTP endpoints support keyless requests. Configure
 HTTPS for connections that use API keys. Set
 `OPENGOVAI_POLICY_AI_ALLOW_PUBLIC=false` if you want to disable the built-in
 public endpoints. Apply changes with `docker compose up -d --wait`.
+
+## Govern a local language model
+
+Create a **Local language model** connection in **Deployment setup**, then
+download `inventory.json`. Save the token and the runner's environment values
+in a protected `local-model.env` file. Include `OPENGOVAI_INTEGRATION_TOKEN`,
+an HTTPS `OPENGOVAI_URL` reachable from Docker, and
+`OPENGOVAI_LOCAL_MODEL_URL` for the model server. For Ollama, set
+`OPENGOVAI_LOCAL_MODEL_RUNTIME=ollama` to capture its model digest.
+For a keyless model on a private HTTP address, explicitly set
+`OPENGOVAI_LOCAL_MODEL_ALLOW_HTTP=true`. Docker Desktop can use
+`host.docker.internal`, and Linux Docker can use `opengovai-model-host`.
+
+```sh
+docker compose run --rm --no-deps --env-from-file local-model.env \
+  -v "$PWD/inventory.json:/input/inventory.json:ro" api \
+  opengovai local-model-sync /input/inventory.json
+```
+
+Verify the connection, bind a policy, and run **Governance scans**. The
+same policy, evidence, review, and release checks apply to the local
+deployment. Keep inventory and any required telemetry current.
 
 ## Configure runtime monitoring and enforcement
 

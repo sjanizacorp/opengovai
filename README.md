@@ -4,13 +4,13 @@
 
 OpenGovAI helps organizations decide whether an AI deployment is ready for release and whether it still meets policy after launch. It ties the decision to an exact deployment version, the controls and evidence that apply to it, the people who approved it, and the runtime conditions they rely on. When something changes, operators can identify which release is affected, why it is blocked, and what needs to be reviewed again.
 
-[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.0.4) · [Install and operate](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
+[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.0) · [Install and operate](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
 
 ![OpenGovAI workspace by Aniza Inc showing active assets, control assessments, findings, and reviews](v5/screenshots/workspace-overview.png)
 
 ## Contents
 
-[Release workflow](#release-workflow) · [Architecture](#deployment-architecture) · [Governance catalogs](#governance-catalogs) · [Policy import and model setup](#policy-import-and-model-setup) · [Integrations](#integrations) · [API and enforcement](#api-and-enforcement) · [Access and operations](#access-and-operations) · [Quick start](#quick-start)
+[Release workflow](#release-workflow) · [Architecture](#deployment-architecture) · [Governance catalogs](#governance-catalogs) · [Policy import and model setup](#policy-import-and-model-setup) · [Local model governance](#govern-a-local-model) · [Integrations](#integrations) · [API and enforcement](#api-and-enforcement) · [Access and operations](#access-and-operations) · [Quick start](#quick-start)
 
 ## Release workflow
 
@@ -113,6 +113,7 @@ The installer can also set up and test an existing keyless Ollama, LM Studio, or
 | **Google Cloud** | Guided setup for Vertex AI endpoints. Your job supplies deployed metadata. | Endpoint resource name, deployed model ID, release reference, and the scoped token. |
 | **IBM Cloud** | Guided setup for watsonx.ai Runtime. Your job supplies deployed metadata. | Deployment space and deployment ID, release reference, and the scoped token. |
 | **Oracle Cloud** | Guided setup for OCI Data Science model deployments. Your job supplies deployed metadata. | Model deployment OCID, release reference, and the scoped token. |
+| **Local model server** | Verify installed model inventory over Ollama or OpenAI-compatible APIs. | Model ID, local server URL, deployment reference or digest, and the scoped token. |
 | **VMware ESXi and vCenter** | Read-only VM lookup using its BIOS UUID. Inventory refreshes when one matching VM is visible, connected, and powered on. | VM BIOS UUID, read-only VMware access, and the application’s model and release reference. |
 | **MLflow** | Scheduled registry discovery and optional evaluation import from run metrics. | Tracking URI, read-only credentials, and evaluation rules if applicable. |
 | **Prometheus** | Scheduled read of aggregate runtime observations. | Prometheus endpoint, configured monitor, deployment reference, and queries for the measurement and observation time. |
@@ -121,9 +122,25 @@ The installer can also set up and test an existing keyless Ollama, LM Studio, or
 <details>
 <summary>See the guided deployment wizard</summary>
 
-![Cloud setup showing guided choices for Azure, Google Cloud, IBM Cloud, Oracle Cloud, and VMware ESXi](v5/screenshots/cloud-provider.png)
+![Deployment setup showing guided choices for Azure, Google Cloud, IBM Cloud, Oracle Cloud, and VMware ESXi](v5/screenshots/cloud-provider.png)
 
 </details>
+
+## Govern a local model
+
+Choose **Deployment setup → Local language model**. Enter the model ID,
+download the inventory manifest, and run the local-model connector from a
+host with access to the model API. The connector checks the model list.
+For Ollama, it also captures the model digest and versions the asset when
+that digest changes. For LM Studio and other compatible servers, supply
+the immutable deployment reference and advance the source revision when
+the deployment changes.
+
+Bind a policy after verifying the connection and open **Governance scans**.
+Local deployments use the same version-specific controls, evidence,
+reviews, release decisions, and runtime rules as cloud deployments.
+See the [native client guide](v5/NATIVE-GUIDE.md#govern-a-local-model-deployment)
+for the runner command and settings.
 
 ## API and enforcement
 
@@ -171,12 +188,31 @@ For production, verify HTTPS ingress, role and unit isolation, readiness checks,
 
 ## Quick start
 
+### Native install
+
+Use CPython 3.12 with virtual-environment support and a package index for
+the first install. Linux requires glibc 2.36 or later.
+
+| System | Apple Silicon or ARM64 | Intel or x86-64 |
+| --- | --- | --- |
+| macOS | [Apple Silicon](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-macos-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-macos-amd64.tar.gz) |
+| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-native-linux-amd64.tar.gz) |
+
+From an expanded v5 checkout, run `./install-native.sh` to detect the host,
+verify the matching package, and start setup. You can also extract the
+matching archive and run `./install.sh`. Setup prints the
+dashboard address and writes `setup.log`. Use `./start.sh`, `./stop.sh`,
+and `./uninstall.sh` to manage the installation. See the
+[native client guide](v5/NATIVE-GUIDE.md).
+
+### Docker install
+
 Start Docker with a Linux engine. Use Bash on macOS, Linux, or Windows with WSL and Docker integration.
 
 | Docker engine architecture | One offline client download |
 | --- | --- |
-| x86-64 | [Download x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.4/opengovai-5.0.4-client-amd64.tar.gz) |
-| ARM64 | [Download ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.0.4/opengovai-5.0.4-client-arm64.tar.gz) |
+| x86-64 | [Download x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-client-amd64.tar.gz) |
+| ARM64 | [Download ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.0/opengovai-5.1.0-client-arm64.tar.gz) |
 
 1. Extract the download and run `./install.sh`. From the expanded v5 deployment directory, run `./install.sh --download` to detect the Docker engine and fetch its bundle automatically.
 2. Choose the dashboard port and optionally connect a running Ollama, LM Studio, or compatible local model server. Provide the model ID and base URL. Setup tests the connection with a sample policy.
