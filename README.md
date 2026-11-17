@@ -4,7 +4,7 @@
 
 OpenGovAI helps organizations decide whether an AI deployment is ready for release and whether it still meets policy after launch. It ties the decision to an exact deployment version, the controls and evidence that apply to it, the people who approved it, and the runtime conditions they rely on. When something changes, operators can identify which release is affected, why it is blocked, and what needs to be reviewed again.
 
-[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.3) · [Install and operate](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
+[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.4) · [Install and operate](v5/README.md) · [Administration PDF](v5/manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](v5/manuals/OpenGovAI-Configuration.pdf) · [API PDF](v5/manuals/OpenGovAI-API.pdf)
 
 ![OpenGovAI workspace by Aniza Inc showing active assets, control assessments, findings, and reviews](v5/screenshots/workspace-overview.png)
 
@@ -217,10 +217,10 @@ index. Linux requires glibc 2.36 or later.
 
 | System | Apple Silicon or ARM64 | Intel or x86-64 |
 | --- | --- | --- |
-| macOS | [Apple Silicon (M-series)](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.3/opengovai-5.1.3-native-macos-apple-silicon-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.3/opengovai-5.1.3-native-macos-intel-x86-64.tar.gz) |
-| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.3/opengovai-5.1.3-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.3/opengovai-5.1.3-native-linux-x86-64.tar.gz) |
+| macOS | [Apple Silicon (M-series)](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.4/opengovai-5.1.4-native-macos-apple-silicon-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.4/opengovai-5.1.4-native-macos-intel-x86-64.tar.gz) |
+| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.4/opengovai-5.1.4-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.4/opengovai-5.1.4-native-linux-x86-64.tar.gz) |
 
-Download the [standalone native installer](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.3/install-native.sh)
+Download the [standalone native installer](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.4/install-native.sh)
 and run `bash install-native.sh`. It detects macOS or the Linux distribution
 and CPU, selects the matching package, and verifies its checksum. Every
 native archive also includes `install-native.sh` beside `install.sh`.

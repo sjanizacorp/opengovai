@@ -108,7 +108,7 @@ setup_copy_package() (
 set -euo pipefail
 umask 077
 here=$(cd "$(dirname "$0")" && pwd -P)
-version='5.1.3'
+version='5.1.4'
 base="https://github.com/sjanizacorp/opengovai/releases/download/v$version"
 case "$(uname -s)" in
     Darwin) platform=macos; system=macOS ;;
@@ -161,5 +161,6 @@ native_fetch "$base/$name.tar.gz" "$archive"
 if command -v sha256sum >/dev/null; then actual=$(sha256sum "$archive"); else actual=$(shasum -a 256 "$archive"); fi
 [[ "$expected" == "${actual%% *}" ]] || { printf '%s\n' 'SHA-256 verification failed.' >&2; exit 1; }
 tar -xzf "$archive" -C "$scratch"
-mv "$scratch/$name" "$directory"
-"$directory/install.sh" "$@"
+setup_copy_package "$scratch/$name" "$directory" install.sh install-native.sh start.sh stop.sh uninstall.sh \
+    opengovai README.md .env.example runtime web manuals .opengovai-package
+"$directory/install.sh" --install-dir "$directory" "$@"
