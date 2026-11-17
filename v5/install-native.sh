@@ -22,10 +22,93 @@ PY
     fi
 }
 
+setup_parse_install_dir() {
+    setup_install_dir=''
+    setup_install_dir_given=false
+    setup_directory_interactive=false
+    setup_directory_args=()
+    [[ ! -t 0 ]] || setup_directory_interactive=true
+    while (( $# )); do
+        case "$1" in
+            --install-dir)
+                if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+                    printf '%s\n' 'Provide a folder after --install-dir.' >&2
+                    return 1
+                fi
+                setup_install_dir=$2
+                setup_install_dir_given=true
+                shift 2 ;;
+            --non-interactive)
+                setup_directory_interactive=false
+                setup_directory_args+=("$1"); shift ;;
+            --port|--admin|--unit|--admin-password-file)
+                if (( $# < 2 )); then printf 'Missing value for %s.\n' "$1" >&2; return 1; fi
+                local value=$2
+                if [[ "$1" == --admin-password-file && "$value" != /* ]]; then value="$PWD/$value"; fi
+                setup_directory_args+=("$1" "$value"); shift 2 ;;
+            *) setup_directory_args+=("$1"); shift ;;
+        esac
+    done
+}
+
+setup_resolve_install_dir() {
+    local default=$1
+    if [[ "$setup_install_dir_given" == false && "$setup_directory_interactive" == true ]]; then
+        read -r -p "Installation folder [$default]: " setup_install_dir ||
+            { printf '%s\n' 'Setup cancelled before selecting a folder.' >&2; return 1; }
+    fi
+    setup_install_dir=${setup_install_dir:-$default}
+    case "$setup_install_dir" in
+        '~') setup_install_dir=$HOME ;;
+        '~/'*) setup_install_dir="$HOME/${setup_install_dir#\~/}" ;;
+    esac
+    if [[ "$setup_install_dir" != /* ]]; then setup_install_dir="$PWD/$setup_install_dir"; fi
+    mkdir -p -- "$setup_install_dir" &&
+        setup_install_dir=$(cd -- "$setup_install_dir" && pwd -P)
+}
+
+setup_same_package() {
+    [[ -f "$1/.opengovai-package" && -x "$1/install.sh" ]] &&
+        [[ "$(cat "$1/.opengovai-package")" == "$2" ]]
+}
+
+setup_require_empty_dir() (
+    shopt -s nullglob dotglob
+    local -a contents=("$1"/*)
+    if (( ${#contents[@]} )); then
+        printf 'Choose an empty installation folder, or run the installer already in %s.\n' "$1" >&2
+        exit 1
+    fi
+)
+
+setup_copy_package() (
+    local source=$1 target=$2 item staging
+    shift 2
+    setup_require_empty_dir "$target" || exit 1
+    for item in "$@"; do
+        if [[ "$target" == "$source/$item" || "$target" == "$source/$item/"* ]]; then
+            printf 'Choose an installation folder outside %s/%s.\n' "$source" "$item" >&2
+            exit 1
+        fi
+    done
+    staging=$(mktemp -d "$target/.opengovai-files.XXXXXX") || exit 1
+    trap 'rm -rf -- "$staging"' EXIT
+    for item in "$@"; do
+        if [[ -e "$source/$item" ]]; then
+            cp -Rp -- "$source/$item" "$staging/" || exit 1
+        fi
+    done
+    for item in "$@"; do
+        if [[ -e "$staging/$item" ]]; then
+            mv -- "$staging/$item" "$target/$item" || exit 1
+        fi
+    done
+)
+
 set -euo pipefail
 umask 077
 here=$(cd "$(dirname "$0")" && pwd -P)
-version='5.1.2'
+version='5.1.3'
 base="https://github.com/sjanizacorp/opengovai/releases/download/v$version"
 case "$(uname -s)" in
     Darwin) platform=macos; system=macOS ;;
@@ -49,17 +132,19 @@ esac
 name="opengovai-$version-native-$artifact"
 case "${1:-}" in
     --print-platform) printf '%s\n' "$system ($arch): $name.tar.gz"; exit 0 ;;
-    -h|--help) printf '%s\n' 'Run bash install-native.sh to detect your platform and install. Use --print-platform to see the selected download.'; exit 0 ;;
+    -h|--help) printf '%s\n' 'Run bash install-native.sh to detect your platform and install. Use --install-dir DIR to choose a destination or --print-platform to see the selected download.'; exit 0 ;;
 esac
 if [[ "$platform-$arch" == '' && -x "$here/install.sh" ]]; then
     exec "$here/install.sh" "$@"
 fi
-directory="$PWD/$name"
-if [[ -e "$directory" ]]; then
-    if [[ -x "$directory/install.sh" ]]; then exec "$directory/install.sh" "$@"; fi
-    printf 'The installation directory already exists: %s\n' "$directory" >&2
-    exit 1
+setup_parse_install_dir "$@"
+setup_resolve_install_dir "$PWD/$name"
+directory=$setup_install_dir
+set -- ${setup_directory_args[@]+"${setup_directory_args[@]}"}
+if setup_same_package "$directory" "native:$version:$platform-$arch"; then
+    exec "$directory/install.sh" --install-dir "$directory" "$@"
 fi
+setup_require_empty_dir "$directory"
 scratch=$(mktemp -d "$PWD/.native-download.XXXXXX")
 cleanup() { rm -rf -- "$scratch"; }
 trap cleanup EXIT

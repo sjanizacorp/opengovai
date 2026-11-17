@@ -18,7 +18,9 @@ local deployment terminal with Docker Engine and the Compose plugin available.
 ## Install and sign in
 
 1. Start Docker on macOS, Linux, or Windows with WSL integration. Extract the
-   client archive and run `./install.sh`. In the expanded GitHub `v5`
+   client archive, run `./install.sh`, and choose the installation folder.
+   For an explicit path, pass `--install-dir "/path/to/OpenGovAI"`.
+   In the expanded GitHub `v5`
    directory, use `./install.sh --download` to fetch the matching download.
 2. Optionally connect an existing Ollama, LM Studio, or keyless OpenAI-compatible
    server. Enter its base URL and exact model ID. The installer sends a test

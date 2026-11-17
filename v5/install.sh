@@ -1,4 +1,87 @@
 #!/usr/bin/env bash
+setup_parse_install_dir() {
+    setup_install_dir=''
+    setup_install_dir_given=false
+    setup_directory_interactive=false
+    setup_directory_args=()
+    [[ ! -t 0 ]] || setup_directory_interactive=true
+    while (( $# )); do
+        case "$1" in
+            --install-dir)
+                if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+                    printf '%s\n' 'Provide a folder after --install-dir.' >&2
+                    return 1
+                fi
+                setup_install_dir=$2
+                setup_install_dir_given=true
+                shift 2 ;;
+            --non-interactive)
+                setup_directory_interactive=false
+                setup_directory_args+=("$1"); shift ;;
+            --port|--admin|--unit|--admin-password-file)
+                if (( $# < 2 )); then printf 'Missing value for %s.\n' "$1" >&2; return 1; fi
+                local value=$2
+                if [[ "$1" == --admin-password-file && "$value" != /* ]]; then value="$PWD/$value"; fi
+                setup_directory_args+=("$1" "$value"); shift 2 ;;
+            *) setup_directory_args+=("$1"); shift ;;
+        esac
+    done
+}
+
+setup_resolve_install_dir() {
+    local default=$1
+    if [[ "$setup_install_dir_given" == false && "$setup_directory_interactive" == true ]]; then
+        read -r -p "Installation folder [$default]: " setup_install_dir ||
+            { printf '%s\n' 'Setup cancelled before selecting a folder.' >&2; return 1; }
+    fi
+    setup_install_dir=${setup_install_dir:-$default}
+    case "$setup_install_dir" in
+        '~') setup_install_dir=$HOME ;;
+        '~/'*) setup_install_dir="$HOME/${setup_install_dir#\~/}" ;;
+    esac
+    if [[ "$setup_install_dir" != /* ]]; then setup_install_dir="$PWD/$setup_install_dir"; fi
+    mkdir -p -- "$setup_install_dir" &&
+        setup_install_dir=$(cd -- "$setup_install_dir" && pwd -P)
+}
+
+setup_same_package() {
+    [[ -f "$1/.opengovai-package" && -x "$1/install.sh" ]] &&
+        [[ "$(cat "$1/.opengovai-package")" == "$2" ]]
+}
+
+setup_require_empty_dir() (
+    shopt -s nullglob dotglob
+    local -a contents=("$1"/*)
+    if (( ${#contents[@]} )); then
+        printf 'Choose an empty installation folder, or run the installer already in %s.\n' "$1" >&2
+        exit 1
+    fi
+)
+
+setup_copy_package() (
+    local source=$1 target=$2 item staging
+    shift 2
+    setup_require_empty_dir "$target" || exit 1
+    for item in "$@"; do
+        if [[ "$target" == "$source/$item" || "$target" == "$source/$item/"* ]]; then
+            printf 'Choose an installation folder outside %s/%s.\n' "$source" "$item" >&2
+            exit 1
+        fi
+    done
+    staging=$(mktemp -d "$target/.opengovai-files.XXXXXX") || exit 1
+    trap 'rm -rf -- "$staging"' EXIT
+    for item in "$@"; do
+        if [[ -e "$source/$item" ]]; then
+            cp -Rp -- "$source/$item" "$staging/" || exit 1
+        fi
+    done
+    for item in "$@"; do
+        if [[ -e "$staging/$item" ]]; then
+            mv -- "$staging/$item" "$target/$item" || exit 1
+        fi
+    done
+)
+
 # Also sourced by deploy.sh in the source distribution.
 setup_note() {
     printf '%s\n' "$*"
@@ -130,15 +213,30 @@ if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then return; fi
 
 set -euo pipefail
 umask 077
-cd "$(dirname "$0")"
-ROOT=$(pwd -P)
+ROOT=$(cd "$(dirname "$0")" && pwd -P)
+case "${1:-}" in
+    -h|--help)
+        printf '%s\n' 'Usage: ./install.sh [--install-dir DIR] [--download] [--port PORT] [--non-interactive --admin-password-file FILE | --skip-admin]'
+        exit 0 ;;
+esac
+setup_parse_install_dir "$@"
+setup_resolve_install_dir "$ROOT"
+set -- ${setup_directory_args[@]+"${setup_directory_args[@]}"}
+if [[ "$setup_install_dir" != "$ROOT" ]]; then
+    if ! setup_same_package "$setup_install_dir" 'docker:5.1.3'; then
+        setup_copy_package "$ROOT" "$setup_install_dir" install.sh compose.yaml SHA256SUMS .env.example \
+            README.md USER-GUIDE.md CLIENT-GUIDE.md screenshots manuals images-amd64.tar.gz images-arm64.tar.gz .opengovai-package
+    fi
+    exec "$setup_install_dir/install.sh" --install-dir "$setup_install_dir" "$@"
+fi
+cd "$ROOT"
 SETUP_LOG="$ROOT/setup.log"
 touch "$SETUP_LOG"
 chmod 600 "$SETUP_LOG"
 SETUP_INTERACTIVE=false
 [[ -t 0 ]] && SETUP_INTERACTIVE=true
 download=false
-release='5.1.1'
+release='5.1.3'
 requested_port=''
 while (( $# )); do
     case "$1" in
@@ -155,7 +253,7 @@ while (( $# )); do
             esac
             shift 2 ;;
         -h|--help)
-            printf '%s\n' 'Usage: ./install.sh [--download] [--port PORT] [--non-interactive [--admin USER] [--unit UNIT] --admin-password-file FILE | --skip-admin]'
+            printf '%s\n' 'Usage: ./install.sh [--install-dir DIR] [--download] [--port PORT] [--non-interactive [--admin USER] [--unit UNIT] --admin-password-file FILE | --skip-admin]'
             exit 0 ;;
         *) setup_die "Unknown option $1." ;;
     esac
@@ -179,6 +277,7 @@ case "$engine" in
 esac
 docker compose version >> "$SETUP_LOG" 2>&1 || setup_die 'Docker Compose v2 is required.'
 setup_note "Host: $host_os ($(uname -m)); selected container platform: linux/$arch."
+setup_note "Installation folder: $ROOT."
 
 setup_step 1 'Locating and verifying the platform package'
 image="images-$arch.tar.gz"
@@ -216,6 +315,11 @@ if [[ ! -f .env ]]; then
         read -r -p 'Dashboard port [3000]: ' requested_port || setup_die 'Input was closed.'
     fi
     cp .env.example .env
+    if [[ -z ${COMPOSE_PROJECT_NAME:-} ]]; then
+        if command -v sha256sum >/dev/null; then project_hash=$(printf '%s' "$ROOT" | sha256sum)
+        else project_hash=$(printf '%s' "$ROOT" | shasum -a 256); fi
+        printf '\nCOMPOSE_PROJECT_NAME=opengovai-%s\n' "${project_hash:0:12}" >> .env
+    fi
 fi
 chmod 600 .env
 if [[ -n "$requested_port" ]]; then
