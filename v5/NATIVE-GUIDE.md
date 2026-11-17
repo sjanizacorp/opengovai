@@ -2,10 +2,13 @@
 
 **Authored by Aniza Inc.**
 
-Extract the archive that matches your macOS or Linux host and CPU. On
-Linux use a glibc-based distribution with glibc 2.36 or later. Install
-CPython 3.12 with virtual-environment support. The initial dependency
-installation uses pip and requires access to your configured package index.
+Extract the archive that matches your macOS or Linux host and CPU. Linux
+requires a glibc-based distribution with glibc 2.36 or later. The installer
+creates an isolated `.venv` for OpenGovAI. It uses compatible CPython 3.12
+when available or downloads a verified copy into `.python` beside the app.
+Your existing Python installations remain available. First install needs
+access to the runtime download and your Python package index. To select
+a compatible interpreter explicitly, set `OPENGOVAI_PYTHON`.
 
 Run `./install.sh` in the extracted directory. Setup creates the first
 administrator and optionally connects a running local model for policy
@@ -17,7 +20,7 @@ drafting. It prints the dashboard address and records the paths in
 | `./start.sh` | Start the workspace and wait for readiness |
 | `./stop.sh` | Stop this installation |
 | `./opengovai status` | Show whether this installation is running |
-| `./uninstall.sh` | Remove the installed environment and keep configuration, logs, and data |
+| `./uninstall.sh` | Remove the virtual environment and managed Python, while keeping configuration, logs, and data |
 | `./opengovai manage --help` | Manage accounts and deployment credentials |
 
 ## Connect an AWS deployment

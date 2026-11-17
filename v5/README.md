@@ -4,7 +4,7 @@
 
 OpenGovAI helps organizations decide whether an AI deployment is ready for release and whether it still meets policy after launch. It ties the decision to an exact deployment version, the controls and evidence that apply to it, the people who approved it, and the runtime conditions they rely on. When something changes, operators can identify which release is affected, why it is blocked, and what needs to be reviewed again.
 
-[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.1) · [Install and operate](#quick-start) · [Administration PDF](manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](manuals/OpenGovAI-Configuration.pdf) · [API PDF](manuals/OpenGovAI-API.pdf)
+[Download the current client release](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.2) · [Install and operate](#quick-start) · [Administration PDF](manuals/OpenGovAI-Administration.pdf) · [Configuration PDF](manuals/OpenGovAI-Configuration.pdf) · [API PDF](manuals/OpenGovAI-API.pdf)
 
 ![OpenGovAI workspace by Aniza Inc showing active assets, control assessments, findings, and reviews](screenshots/workspace-overview.png)
 
@@ -210,15 +210,17 @@ For production, verify HTTPS ingress, role and unit isolation, readiness checks,
 
 ### Native install
 
-Use CPython 3.12 with virtual-environment support and a package index for
-the first install. Linux requires glibc 2.36 or later.
+Setup creates an isolated `.venv`. It reuses compatible CPython 3.12 or
+downloads a checksum-verified runtime into the installation folder.
+First install needs access to the runtime download and a Python package
+index. Linux requires glibc 2.36 or later.
 
 | System | Apple Silicon or ARM64 | Intel or x86-64 |
 | --- | --- | --- |
-| macOS | [Apple Silicon (M-series)](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-macos-apple-silicon-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-macos-intel-x86-64.tar.gz) |
-| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/opengovai-5.1.1-native-linux-x86-64.tar.gz) |
+| macOS | [Apple Silicon (M-series)](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.2/opengovai-5.1.2-native-macos-apple-silicon-arm64.tar.gz) | [Intel](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.2/opengovai-5.1.2-native-macos-intel-x86-64.tar.gz) |
+| Linux | [ARM64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.2/opengovai-5.1.2-native-linux-arm64.tar.gz) | [x86-64](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.2/opengovai-5.1.2-native-linux-x86-64.tar.gz) |
 
-Download the [standalone native installer](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.1/install-native.sh)
+Download the [standalone native installer](https://github.com/sjanizacorp/opengovai/releases/download/v5.1.2/install-native.sh)
 and run `bash install-native.sh`. It detects macOS or the Linux distribution
 and CPU, selects the matching package, and verifies its checksum. Every
 native archive also includes `install-native.sh` beside `install.sh`. Setup prints the
@@ -228,6 +230,7 @@ and `./uninstall.sh` to manage the installation. See the
 
 ### Docker install
 
+The current Docker client is [v5.1.1](https://github.com/sjanizacorp/opengovai/releases/tag/v5.1.1).
 Start Docker with a Linux engine. Use Bash on macOS, Linux, or Windows with WSL and Docker integration.
 
 | Docker engine architecture | One offline client download |
